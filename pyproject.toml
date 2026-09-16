@@ -6,17 +6,27 @@ readme = "README.md"
 authors = [
     { name = "haddad joe", email = "joe.haddad3@net.usj.edu.lb" }
 ]
-requires-python = ">=3.11"
+requires-python = "==3.11.*"
+
 dependencies = [
     "mlflow>=3.16.0",
     "pillow>=12.3.0",
     "scikit-learn>=1.9.1",
-    "torch>=2.14.0",
+    "torch",
     "torchvision>=0.29.0",
 ]
 
 [project.scripts]
 mlops-lab-1 = "mlops_lab_1:main"
+
+[[tool.uv.index]]
+name = "pytorch-cu132"
+url = "https://download.pytorch.org/whl/cu132"
+explicit = true
+
+[tool.uv.sources]
+torch = { path = "wheels/torch-2.14.0+cu132-cp311-cp311-win_amd64.whl" }
+torchvision = { index = "pytorch-cu132" }
 
 [build-system]
 requires = ["uv_build>=0.12.10,<0.13.0"]
