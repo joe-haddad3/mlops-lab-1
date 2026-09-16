@@ -1,75 +1,66 @@
-from pathlib import Path
-from PIL import Image
-import shutil
+"""Prepare the Food-11 dataset.
 
-# Category index -> name, based on the lab's mapping
-CATEGORIES = {
-    0: "Bread",
-    1: "Dairy product",
-    2: "Dessert",
-    3: "Egg",
-    4: "Fried food",
-    5: "Meat",
-    6: "Noodles-Pasta",
-    7: "Rice",
-    8: "Seafood",
-    9: "Soup",
-    10: "Vegetable-Fruit",
-}
+Reads data/food11_raw/{training,evaluation,validation}/<class>_<index>.jpg,
+resizes each image to 128x128 and writes it into a folder named after its
+category. Also builds a "mini" copy with at most 100 images per category.
+"""
+
+from pathlib import Path
+
+from PIL import Image
 
 RAW_DIR = Path("data/food11_raw")
 PROCESSED_DIR = Path("data/food11_processed")
 MINI_DIR = Path("data/food11_processed_mini")
+
 SPLITS = ["training", "evaluation", "validation"]
-TARGET_SIZE = (128, 128)
-MINI_LIMIT = 100
+IMAGE_SIZE = (128, 128)
+MINI_PER_CATEGORY = 100
+
+# The number prefixing each raw filename is the category index.
+CATEGORIES = [
+    "Bread",
+    "Dairy product",
+    "Dessert",
+    "Egg",
+    "Fried food",
+    "Meat",
+    "Noodles-Pasta",
+    "Rice",
+    "Seafood",
+    "Soup",
+    "Vegetable-Fruit",
+]
 
 
-def get_category_from_filename(filename: str) -> str:
-    # Food-11 filenames look like "0_123.jpg" -> category index is before the underscore
-    category_index = int(filename.split("_")[0])
-    return CATEGORIES[category_index]
+def process_split(split: str) -> None:
+    src_dir = RAW_DIR / split
+    counts = {category: 0 for category in CATEGORIES}
+
+    for src_path in sorted(src_dir.glob("*.jpg")):
+        index = int(src_path.stem.split("_")[0])
+        category = CATEGORIES[index]
+
+        with Image.open(src_path) as image:
+            resized = image.convert("RGB").resize(IMAGE_SIZE)
+
+            out_dir = PROCESSED_DIR / split / category
+            out_dir.mkdir(parents=True, exist_ok=True)
+            resized.save(out_dir / src_path.name)
+
+            if counts[category] < MINI_PER_CATEGORY:
+                mini_dir = MINI_DIR / split / category
+                mini_dir.mkdir(parents=True, exist_ok=True)
+                resized.save(mini_dir / src_path.name)
+
+        counts[category] += 1
+
+    print(f"{split}: {sum(counts.values())} images")
 
 
-def process_split(split: str):
-    split_dir = RAW_DIR / split
-    if not split_dir.exists():
-        print(f"Warning: {split_dir} does not exist, skipping")
-        return
-
-    mini_counts = {name: 0 for name in CATEGORIES.values()}
-
-    for image_path in split_dir.iterdir():
-        if not image_path.is_file():
-            continue
-
-        category = get_category_from_filename(image_path.name)
-
-        # Resize and save to food11_processed
-        out_dir = PROCESSED_DIR / split / category
-        out_dir.mkdir(parents=True, exist_ok=True)
-        out_path = out_dir / image_path.name
-
-        with Image.open(image_path) as img:
-            img = img.convert("RGB")
-            img_resized = img.resize(TARGET_SIZE)
-            img_resized.save(out_path)
-
-        # Also save to food11_processed_mini, capped at MINI_LIMIT per category
-        if mini_counts[category] < MINI_LIMIT:
-            mini_out_dir = MINI_DIR / split / category
-            mini_out_dir.mkdir(parents=True, exist_ok=True)
-            mini_out_path = mini_out_dir / image_path.name
-            shutil.copy(out_path, mini_out_path)
-            mini_counts[category] += 1
-
-    print(f"Finished processing split: {split}")
-
-
-def main():
+def main() -> None:
     for split in SPLITS:
         process_split(split)
-    print("Done. Processed datasets are in data/food11_processed and data/food11_processed_mini")
 
 
 if __name__ == "__main__":
