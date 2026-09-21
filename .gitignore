@@ -3,3 +3,5 @@
 pyproject.toml.bak
 mlflow.db
 mlruns/
+mlartifacts/
+__pycache__/

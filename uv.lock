@@ -4,7 +4,8 @@ requires-python = "==3.11.*"
 resolution-markers = [
     "sys_platform == 'win32'",
     "sys_platform == 'emscripten'",
-    "sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "sys_platform == 'linux'",
+    "sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32'",
 ]
 
 [[package]]
@@ -788,20 +789,34 @@ name = "mlops-lab-1"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "fastapi" },
     { name = "mlflow" },
     { name = "pillow" },
+    { name = "python-multipart" },
     { name = "scikit-learn" },
-    { name = "torch" },
-    { name = "torchvision" },
+    { name = "torch", version = "2.14.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' and sys_platform != 'win32'" },
+    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'linux'" },
+    { name = "torch", version = "2.14.0+cu132", source = { path = "wheels/torch-2.14.0+cu132-cp311-cp311-win_amd64.whl" }, marker = "sys_platform == 'win32'" },
+    { name = "torchvision", version = "0.29.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' and sys_platform != 'win32'" },
+    { name = "torchvision", version = "0.29.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'linux'" },
+    { name = "torchvision", version = "0.29.0+cu132", source = { registry = "https://download.pytorch.org/whl/cu132" }, marker = "sys_platform == 'win32'" },
+    { name = "uvicorn" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "fastapi", specifier = ">=0.141.1" },
     { name = "mlflow", specifier = ">=3.16.0" },
     { name = "pillow", specifier = ">=12.3.0" },
+    { name = "python-multipart", specifier = ">=0.0.32" },
     { name = "scikit-learn", specifier = ">=1.9.1" },
-    { name = "torch", path = "wheels/torch-2.14.0+cu132-cp311-cp311-win_amd64.whl" },
-    { name = "torchvision", specifier = ">=0.29.0", index = "https://download.pytorch.org/whl/cu132" },
+    { name = "torch", marker = "sys_platform != 'linux' and sys_platform != 'win32'" },
+    { name = "torch", marker = "sys_platform == 'linux'", index = "https://download.pytorch.org/whl/cpu" },
+    { name = "torch", marker = "sys_platform == 'win32'", path = "wheels/torch-2.14.0+cu132-cp311-cp311-win_amd64.whl" },
+    { name = "torchvision", marker = "sys_platform != 'linux' and sys_platform != 'win32'", specifier = ">=0.29.0" },
+    { name = "torchvision", marker = "sys_platform == 'linux'", specifier = ">=0.29.0", index = "https://download.pytorch.org/whl/cpu" },
+    { name = "torchvision", marker = "sys_platform == 'win32'", specifier = ">=0.29.0", index = "https://download.pytorch.org/whl/cu132" },
+    { name = "uvicorn", specifier = ">=0.53.0" },
 ]
 
 [[package]]
@@ -1171,6 +1186,15 @@ wheels = [
 ]
 
 [[package]]
+name = "python-multipart"
+version = "0.0.32"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/5b/42/55c32bb9b12693c092ad250a0e82edb5b31ddeda6eb772de5f308b3804ad/python_multipart-0.0.32.tar.gz", hash = "sha256:be54b7f3fa167bb83e4fcd936b887b708f4e57fe75911c02aebf53efaf8d938e", size = 46881, upload-time = "2026-06-04T16:18:58.647Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e1/04/e8135ebd1ad02c56ec633277529b2602ff99ff634be76cdba5744cf554fd/python_multipart-0.0.32-py3-none-any.whl", hash = "sha256:ff6d3f776f16878c894e52e107296ffc890e913c611b1a4ec6c44e2821fe2e23", size = 30042, upload-time = "2026-06-04T16:18:57.319Z" },
+]
+
+[[package]]
 name = "pywin32"
 version = "312"
 source = { registry = "https://pypi.org/simple" }
@@ -1362,8 +1386,54 @@ wheels = [
 
 [[package]]
 name = "torch"
+version = "2.14.0"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "sys_platform == 'emscripten'",
+    "sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32'",
+]
+dependencies = [
+    { name = "filelock" },
+    { name = "fsspec" },
+    { name = "jinja2" },
+    { name = "networkx" },
+    { name = "setuptools" },
+    { name = "sympy" },
+    { name = "typing-extensions" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e6/2c/0c9757a1ea1fff8ccc4faff1d1c87e98a69542b5d4b606e50f7518f72e58/torch-2.14.0-cp311-cp311-macosx_14_0_arm64.whl", hash = "sha256:ae530ddd3f3b94248b77f1fd3313c4f3405bd0d17283d505b81574816767133a", size = 127277244, upload-time = "2026-09-02T13:42:57.855Z" },
+]
+
+[[package]]
+name = "torch"
+version = "2.14.0+cpu"
+source = { registry = "https://download.pytorch.org/whl/cpu" }
+resolution-markers = [
+    "sys_platform == 'linux'",
+]
+dependencies = [
+    { name = "filelock" },
+    { name = "fsspec" },
+    { name = "jinja2" },
+    { name = "networkx" },
+    { name = "setuptools" },
+    { name = "sympy" },
+    { name = "typing-extensions" },
+]
+wheels = [
+    { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.14.0%2Bcpu-cp311-cp311-linux_s390x.whl", hash = "sha256:3fa39713d13f23563ad11636bfff76b677ab4addbc240c54e6b7e47622e8973d", upload-time = "2026-09-02T18:31:08Z" },
+    { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.14.0%2Bcpu-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:08894195f84541edcbd09072e6c53b791d4cdd09f650b05473f35718a848fd7b", upload-time = "2026-09-02T18:31:13Z" },
+    { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.14.0%2Bcpu-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:673dbf5c9bbadfffab7a386b6dd7a0c219f1408a328b7b4e86d0ae551cdafa42", upload-time = "2026-09-02T18:31:19Z" },
+]
+
+[[package]]
+name = "torch"
 version = "2.14.0+cu132"
 source = { path = "wheels/torch-2.14.0+cu132-cp311-cp311-win_amd64.whl" }
+resolution-markers = [
+    "sys_platform == 'win32'",
+]
 dependencies = [
     { name = "filelock" },
     { name = "fsspec" },
@@ -1394,16 +1464,51 @@ provides-extras = ["optree", "opt-einsum", "pyyaml"]
 
 [[package]]
 name = "torchvision"
-version = "0.29.0+cu132"
-source = { registry = "https://download.pytorch.org/whl/cu132" }
+version = "0.29.0"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "sys_platform == 'emscripten'",
+    "sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32'",
+]
 dependencies = [
     { name = "numpy" },
     { name = "pillow" },
-    { name = "torch" },
+    { name = "torch", version = "2.14.0", source = { registry = "https://pypi.org/simple" } },
 ]
 wheels = [
-    { url = "https://download-r2.pytorch.org/whl/cu132/torchvision-0.29.0%2Bcu132-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:51dcff86d2fb8d8512f779ca618c7620ae7790dc89091f9819ea4b6a28a2c504", upload-time = "2026-09-02T00:28:13Z" },
-    { url = "https://download-r2.pytorch.org/whl/cu132/torchvision-0.29.0%2Bcu132-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:0257f8768edfa932576392058962aa979789c1fd1619af7209bc6c5ee66a8ffc", upload-time = "2026-09-02T00:28:13Z" },
+    { url = "https://files.pythonhosted.org/packages/ea/47/6b32740f7ae0ecf8772297f7e61e842b127b11de5c2c07efd9aeeaed0690/torchvision-0.29.0-cp311-cp311-macosx_14_0_arm64.whl", hash = "sha256:bbe15455b59a6c9d822584fd3faaaac50ee972101d7bb7e2887da456e148a3ea", size = 1813735, upload-time = "2026-09-02T13:46:58.108Z" },
+]
+
+[[package]]
+name = "torchvision"
+version = "0.29.0+cpu"
+source = { registry = "https://download.pytorch.org/whl/cpu" }
+resolution-markers = [
+    "sys_platform == 'linux'",
+]
+dependencies = [
+    { name = "numpy" },
+    { name = "pillow" },
+    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" } },
+]
+wheels = [
+    { url = "https://download-r2.pytorch.org/whl/cpu/torchvision-0.29.0%2Bcpu-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:8013771465280b282306d4f037e4358551fb232ff621d99b2bc971c4f77a8f7e", upload-time = "2026-09-02T00:27:42Z" },
+    { url = "https://download-r2.pytorch.org/whl/cpu/torchvision-0.29.0%2Bcpu-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:c7cc533222df6c81834595e1893200555cbc15183b7a4f5bb924bccda5090d8d", upload-time = "2026-09-02T00:27:42Z" },
+]
+
+[[package]]
+name = "torchvision"
+version = "0.29.0+cu132"
+source = { registry = "https://download.pytorch.org/whl/cu132" }
+resolution-markers = [
+    "sys_platform == 'win32'",
+]
+dependencies = [
+    { name = "numpy" },
+    { name = "pillow" },
+    { name = "torch", version = "2.14.0+cu132", source = { path = "wheels/torch-2.14.0+cu132-cp311-cp311-win_amd64.whl" } },
+]
+wheels = [
     { url = "https://download-r2.pytorch.org/whl/cu132/torchvision-0.29.0%2Bcu132-cp311-cp311-win_amd64.whl", hash = "sha256:59248bcdede36d6e1353e6873d6ed256474c767278dd5b65731f008221390d19", upload-time = "2026-09-02T00:28:13Z" },
 ]
 

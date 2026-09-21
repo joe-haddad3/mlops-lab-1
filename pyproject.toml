@@ -9,11 +9,14 @@ authors = [
 requires-python = "==3.11.*"
 
 dependencies = [
+    "fastapi>=0.141.1",
     "mlflow>=3.16.0",
     "pillow>=12.3.0",
+    "python-multipart>=0.0.32",
     "scikit-learn>=1.9.1",
     "torch",
     "torchvision>=0.29.0",
+    "uvicorn>=0.53.0",
 ]
 
 [project.scripts]
@@ -24,9 +27,20 @@ name = "pytorch-cu132"
 url = "https://download.pytorch.org/whl/cu132"
 explicit = true
 
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
 [tool.uv.sources]
-torch = { path = "wheels/torch-2.14.0+cu132-cp311-cp311-win_amd64.whl" }
-torchvision = { index = "pytorch-cu132" }
+torch = [
+  { path = "wheels/torch-2.14.0+cu132-cp311-cp311-win_amd64.whl", marker = "sys_platform == 'win32'" },
+  { index = "pytorch-cpu", marker = "sys_platform == 'linux'" },
+]
+torchvision = [
+  { index = "pytorch-cu132", marker = "sys_platform == 'win32'" },
+  { index = "pytorch-cpu", marker = "sys_platform == 'linux'" },
+]
 
 [build-system]
 requires = ["uv_build>=0.12.10,<0.13.0"]

@@ -1,0 +1,12 @@
+.venv/
+data/
+mlruns/
+mlartifacts/
+mlflow.db
+.git/
+__pycache__/
+**/__pycache__/
+*.pyc
+.dvc/cache/
+pyproject.toml.bak
+lab/
