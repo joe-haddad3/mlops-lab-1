@@ -3,6 +3,11 @@ on:
   push:
   pull_request:
 
+env:
+  # use uv.lock as-is: without this, `uv run` re-checks the lock against pyproject.toml,
+  # which needs the windows-only torch wheel in wheels/ (gitignored, so absent on the runner)
+  UV_FROZEN: "1"
+
 jobs:
   test:
     runs-on: ubuntu-latest
