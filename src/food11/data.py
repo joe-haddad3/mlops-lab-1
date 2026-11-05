@@ -14,11 +14,10 @@ PROCESSED_DIR = Path("data/food11_processed")
 MINI_DIR = Path("data/food11_processed_mini")
 
 SPLITS = ["training", "evaluation", "validation"]
-IMAGE_SIZE = (128, 128)
 MINI_PER_CATEGORY = 100
 
 # The number prefixing each raw filename is the category index.
-CATEGORIES = [
+CLASSES = [
     "Bread",
     "Dairy product",
     "Dessert",
@@ -33,16 +32,26 @@ CATEGORIES = [
 ]
 
 
+def category_from_filename(filename: str) -> str:
+    """'3_120.jpg' -> 'Egg'"""
+    index = int(Path(filename).name.split("_")[0])
+    return CLASSES[index]
+
+
+def resize_image(img: Image.Image, size: int = 128) -> Image.Image:
+    """Returns an RGB image of size x size."""
+    return img.convert("RGB").resize((size, size))
+
+
 def process_split(split: str) -> None:
     src_dir = RAW_DIR / split
-    counts = {category: 0 for category in CATEGORIES}
+    counts = {category: 0 for category in CLASSES}
 
     for src_path in sorted(src_dir.glob("*.jpg")):
-        index = int(src_path.stem.split("_")[0])
-        category = CATEGORIES[index]
+        category = category_from_filename(src_path.name)
 
         with Image.open(src_path) as image:
-            resized = image.convert("RGB").resize(IMAGE_SIZE)
+            resized = resize_image(image)
 
             out_dir = PROCESSED_DIR / split / category
             out_dir.mkdir(parents=True, exist_ok=True)

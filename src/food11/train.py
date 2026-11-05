@@ -3,7 +3,7 @@ import argparse
 import mlflow
 import mlflow.pytorch
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.utils.data import DataLoader
 from torchvision import datasets, models, transforms
 
@@ -102,7 +102,7 @@ def main():
             mlflow.log_metric("val_loss", val_loss, step=epoch)
             mlflow.log_metric("val_accuracy", val_accuracy, step=epoch)
 
-        test_loss, test_accuracy = evaluate(model, test_loader, criterion, device)
+        _, test_accuracy = evaluate(model, test_loader, criterion, device)
         print(f"final test_accuracy={test_accuracy:.4f}")
 
         mlflow.log_metric("test_accuracy", test_accuracy)

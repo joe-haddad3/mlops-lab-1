@@ -45,3 +45,18 @@ torchvision = [
 [build-system]
 requires = ["uv_build>=0.12.10,<0.13.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.2.0",
+    "ruff>=0.17.3",
+]
+
+[tool.ruff.lint.isort]
+# the repo has a mlflow/ folder (the server's Dockerfile), don't treat it as our package
+known-third-party = ["mlflow"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

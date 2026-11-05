@@ -1,10 +1,12 @@
 import io
 import os
+from contextlib import asynccontextmanager
+from typing import Annotated
 
 import mlflow
 import numpy as np
 import torch
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from PIL import Image
 from torchvision import transforms
 
@@ -31,22 +33,40 @@ TRANSFORM = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
-model = mlflow.pyfunc.load_model("models:/food11@champion")
+# Module-level so tests can swap in a fake with monkeypatch.setattr(serve, "model", ...)
+model = None
 
-app = FastAPI()
+
+def load_model():
+    global model
+    if os.environ.get("SKIP_MODEL"):
+        return
+    model = mlflow.pyfunc.load_model("models:/food11@champion")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    load_model()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "model_loaded": model is not None}
 
 
 @app.post("/predict")
-async def predict(file: UploadFile = File(...)):
+async def predict(file: Annotated[UploadFile, File()]):
+    if model is None:
+        raise HTTPException(status_code=503, detail="model not loaded")
+
     image = Image.open(io.BytesIO(await file.read())).convert("RGB")
     batch = TRANSFORM(image).unsqueeze(0).numpy().astype(np.float32)
 
-    logits = torch.from_numpy(np.asarray(model.predict(batch)))
+    logits = torch.from_numpy(np.asarray(model.predict(batch), dtype=np.float32))
     probs = torch.softmax(logits, dim=1)[0]
     idx = int(probs.argmax())
 
