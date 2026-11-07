@@ -35,7 +35,7 @@ CLASSES = [
 def category_from_filename(filename: str) -> str:
     """'3_120.jpg' -> 'Egg'"""
     index = int(Path(filename).name.split("_")[0])
-    return CLASSES[index]
+    return CLASSES[index - 1]
 
 
 def resize_image(img: Image.Image, size: int = 128) -> Image.Image:
