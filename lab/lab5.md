@@ -80,15 +80,32 @@ Question 5: The `smoke` job has `needs: test`. What happens to it if a unit test
 
 with `needs: test`, if a test fails the smoke job doesn't run at all, it shows as skipped. and since push needs smoke, push is skipped too, so a broken commit never gets an image in the registry.
 
+this happened for real on my first push (run 42007172276). the test job failed at the ruff step after 10 seconds, with exit code 2 (not a lint error, uv itself failed, `uv run` tried to re-lock and couldn't find the windows-only torch wheel `wheels/torch-2.14.0+cu132-...-win_amd64.whl` on the linux runner). the jobs api showed `test=failure; smoke=skipped; push=skipped`, and pytest inside the test job was skipped too, because steps in a job also stop at the first failure. nothing got built or pushed.
+
 without `needs`, jobs run in parallel by default on separate runners. smoke would build and probe the image even though the tests failed. that wastes a few minutes of runner time, and worse, if push also had no needs, a commit with failing tests could still get pushed to ghcr.io. the run would be red overall, but the image would be there.
 
 ---
 
 Question 6: How long did the whole run take? Run it a second time and compare. Which step got faster, and why?
 
-TODO: fill in after pushing, from the actions tab (first run vs `git commit --allow-empty -m "ci"`).
+timings from the actions api, first green run vs the empty `ci` commit right after:
 
-expected: `uv sync --frozen` gets much faster on the second run because `setup-uv` with `enable-cache: true` saves the uv cache (the downloaded wheels, torch cpu is the big one) to github's cache keyed on uv.lock, and restores it on the next run. `docker build` in the smoke job does not get faster, it's a plain `docker build` on a fresh runner with no layer cache, so it reinstalls everything every time. the push job's build does get faster because of `cache-from/cache-to: type=gha`.
+| job / step | run 1 (72e6547) | run 2 (empty commit) |
+|---|---|---|
+| test (total) | 23s | 21s |
+| &nbsp;&nbsp;uv sync --frozen | 4s | 4s |
+| &nbsp;&nbsp;pytest | 13s | 11s |
+| smoke (total) | 62s | 45s |
+| &nbsp;&nbsp;docker build | 48s | 31s |
+| push (total) | 227s | 18s |
+| &nbsp;&nbsp;docker/build-push-action | **209s** | **4s** |
+| **whole run** | **317s (5m17)** | **89s (1m29)** |
+
+the step that got faster is the build and push in the push job, 209s down to 4s. that's `cache-from: type=gha` / `cache-to: type=gha,mode=max`. run 1 built every layer (installing torch cpu and the whole venv is the slow part) and saved all of them, including the intermediate builder stage, to github's actions cache. run 2 changed nothing, the commit is empty, so every layer was a cache hit, and the layers were already on ghcr.io from run 1, so all it uploaded was a new tag pointing at the same layers.
+
+what i expected and didn't see: i thought `uv sync` would get faster thanks to `setup-uv`'s `enable-cache`. it was 4s both times, uv just downloads and installs that fast on github's network, so there wasn't much to save. the smoke job's `docker build` went 48s -> 31s, but that's not caching, it's a plain `docker build` on a brand new runner with no layer cache, so it rebuilds from scratch every time. the 17s difference is just download speed variance. if smoke ever became the slow part i'd give it the same buildx + gha cache as push.
+
+the first ever push actually failed, see question 5, uv run re-checked the lock against pyproject.toml and needed the windows-only torch wheel in `wheels/` that isn't in git. fixed with `UV_FROZEN: "1"` in the workflow env.
 
 ---
 
@@ -122,7 +139,26 @@ with `contents: read, packages: write` the worst case is a bad image in my packa
 
 Question 9: What does the pull request page show? Could you still merge? What does that change for a team?
 
-TODO: fill in after the branch protection + broken-test pr.
+i set a classic branch protection rule on `main`: require a pull request, require the `test` and `smoke` checks (no required approvals, i'm alone on the repo). then on a branch `break-category` i changed `category_from_filename` to `return CLASSES[index - 1]`, an off by one, so `0_12.jpg` comes back as Vegetable-Fruit instead of Bread, and opened pr #1.
+
+what the pr page showed:
+
+- "Some checks were not successful, 1 failing, 1 in progress, 2 skipped checks"
+- `ci / test (push)`, **Failing after 19s**, marked **Required**
+- `ci / test (pull_request)` running, also Required. the workflow has both `on: push` and `on: pull_request`, so a pr branch gets tested twice, once for the branch push and once for the merge result of the pr
+- `ci / smoke (push)` and `ci / push (push)` **skipped**, because of `needs:`. smoke is Required too, so a skipped smoke counts as not passed
+- the green **Merge pull request** button was greyed out
+- above it a red checkbox, **"Merge without waiting for requirements to be met (bypass rules)"**
+
+could i still merge? not normally, the button is disabled. but yes, technically, because i'm the repo owner, and admins can bypass a classic rule unless "Do not allow bypassing the above settings" is ticked. i didn't tick it, so as owner i get the escape hatch. a normal collaborator wouldn't see that checkbox at all. for a real team i'd tick "do not allow bypassing" (or use a ruleset with an empty bypass list) so the rule applies to admins too.
+
+what it changes for a team: "everybody runs the tests on their laptop before pushing" relies on everyone remembering, every time, with the same environment. people forget, run only the tests they think are relevant, have a different python or a stale venv, or have a file on their machine that isn't committed (exactly my `wheels/` torch wheel, which made ci fail on the first push while everything passed on my laptop). with the rule:
+
+- the check is enforced, not voluntary, and it's the same clean ubuntu machine for everybody
+- the result is public on the pr, a reviewer sees red/green before reading any code, and nobody has to take "i ran the tests" on trust
+- main is always green, so anyone can branch off it or deploy it, and a broken commit can't land and then get built into an image and pushed to ghcr.io, because push only runs on main
+
+then i pushed the fix to the same branch, the checks re-ran on the new commit, went green, the merge button became available and i merged.
 
 ---
 
